@@ -1,24 +1,26 @@
-% System Identification for Carbon Capture Reboiler
-% Simulating First-Order Plus Dead Time (FOPDT)
+clear;
+clc;
+close all;
+k=1.5;
+tau=3.8*3600;
+theta=15*60;
 
-K = 1.2;              % Process Gain
-tau = 228;            % Time Constant (approx 3.8 hours in minutes)
-dead_time = 15;       % Transport Delay (minutes)
+s=tf('s');
+plant=(k/(s*tau+1))*exp(-s*theta);
 
-s = tf('s');
-plant_tf = (K / (tau * s + 1)) * exp(-dead_time * s);
+kp=1.2;
+ki=0.005;
+kd=0;
+controller=pid(kp,ki,kd);
+closedloop=feedback(controller*plant,1);
 
-t = (0:1:1000)';      % Time vector      
-[y, t] = step(plant_tf, t);
+t=0:10:(15*3600);
+[y,tout]=step(closedloop,t);
 
 figure;
-plot(t, y, 'LineWidth', 2);
-title('Carbon Capture Thermal Inertia (Step Response)');
-xlabel('Time (Minutes)');
-ylabel('Temperature Shift');
+plot(tout/3600,y,'r','LineWidth',2);
+title('PID Controller Failure on High Latency CCS Plant');
+xlabel('Time(Hours)');
+ylabel('Temperature Change(Delta T)');
 grid on;
-
-% EXPORT THE DATASET FOR AI TRAINING
-dataset = table(t, y, 'VariableNames', {'Time_Minutes', 'Temperature'});
-writetable(dataset, '../python_ai_controller/carbon_capture_data.csv');
-disp('SUCCESS: Dataset exported to carbon_capture_data.csv');
+yline(1, 'k--', 'Target Reference', 'LineWidth', 1.5);
